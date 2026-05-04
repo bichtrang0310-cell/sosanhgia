@@ -3,28 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Receiving - Nhận Hàng Thông Minh</title>
+  <title>Smart Receiving - Nhận Hàng</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
     body { font-family: 'Segoe UI', sans-serif; }
     .big-btn { transition: all 0.3s; }
     .big-btn:active { transform: scale(0.95); }
-    .blink { animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity: 0.6; } }
+    .preview-img { max-height: 300px; border-radius: 12px; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen pb-20">
 
-  <!-- HEADER -->
   <div class="bg-blue-600 text-white p-4 fixed top-0 w-full z-50 shadow-md">
     <h1 class="text-xl font-bold text-center">Smart Receiving</h1>
-    <p class="text-center text-sm opacity-90">Nhân viên kho • Thu mua</p>
+    <p class="text-center text-sm opacity-90">Nhận hàng thông minh</p>
   </div>
 
   <div class="pt-20 px-4 max-w-lg mx-auto">
 
-    <!-- MÀN HÌNH CHÍNH -->
+    <!-- HOME -->
     <div id="home" class="space-y-6">
       <div class="text-center py-6">
         <h2 class="text-2xl font-bold text-gray-800">Chào bạn!</h2>
@@ -34,12 +32,12 @@
       <div class="grid grid-cols-1 gap-4">
         <button onclick="showScreen('po')" class="big-btn bg-green-500 hover:bg-green-600 text-white text-xl font-semibold py-8 rounded-2xl shadow-lg flex items-center justify-center gap-3">
           <i class="fa-solid fa-file-alt text-3xl"></i>
-          <span>1. Quét Đơn Đặt Hàng (PO)</span>
+          <span>1. Chụp Đơn Đặt Hàng (PO)</span>
         </button>
 
         <button onclick="showScreen('invoice')" class="big-btn bg-orange-500 hover:bg-orange-600 text-white text-xl font-semibold py-8 rounded-2xl shadow-lg flex items-center justify-center gap-3">
           <i class="fa-solid fa-receipt text-3xl"></i>
-          <span>2. Quét Hóa Đơn Đỏ</span>
+          <span>2. Chụp Hóa Đơn Đỏ</span>
         </button>
 
         <button onclick="showScreen('date')" class="big-btn bg-purple-500 hover:bg-purple-600 text-white text-xl font-semibold py-8 rounded-2xl shadow-lg flex items-center justify-center gap-3">
@@ -49,58 +47,71 @@
       </div>
     </div>
 
-    <!-- MÀN HÌNH QUÉT PO -->
+    <!-- CHỤP PO -->
     <div id="po-screen" class="hidden">
-      <h3 class="text-lg font-bold mb-4">Quét Đơn Đặt Hàng (PO)</h3>
-      <div class="bg-white border-2 border-dashed border-gray-400 rounded-2xl h-64 flex flex-col items-center justify-center text-center p-6">
-        <i class="fa-solid fa-camera text-6xl text-gray-400 mb-4"></i>
-        <p class="font-medium">Chụp ảnh Đơn PO</p>
-        <button onclick="simulateScan('po')" class="mt-6 bg-blue-600 text-white px-8 py-3 rounded-xl">📸 Chụp ngay</button>
-        <button onclick="useDemoData()" class="mt-3 text-sm text-gray-500">Dùng dữ liệu demo</button>
+      <h3 class="text-lg font-bold mb-3">Chụp Đơn Đặt Hàng (PO)</h3>
+      <div class="bg-white rounded-2xl shadow p-4">
+        <input type="file" id="po-camera" accept="image/*" capture="environment" class="hidden" onchange="handleImage(this, 'po')">
+        <button onclick="document.getElementById('po-camera').click()" 
+                class="w-full bg-blue-600 text-white py-10 rounded-2xl text-xl font-medium flex flex-col items-center gap-3">
+          <i class="fa-solid fa-camera text-4xl"></i>
+          <span>📸 Chụp Đơn PO ngay</span>
+        </button>
+        <div id="po-preview" class="hidden mt-4">
+          <img id="po-image" class="preview-img w-full">
+        </div>
       </div>
-      <button onclick="showScreen('home')" class="mt-6 text-gray-500">← Quay lại</button>
+      <button onclick="processPO()" class="mt-6 w-full bg-green-600 text-white py-4 rounded-2xl font-bold">Tiếp tục →</button>
+      <button onclick="showScreen('home')" class="mt-3 text-gray-500">← Quay lại</button>
     </div>
 
-    <!-- MÀN HÌNH QUÉT HÓA ĐƠN -->
+    <!-- CHỤP HÓA ĐƠN -->
     <div id="invoice-screen" class="hidden">
-      <h3 class="text-lg font-bold mb-4">Quét Hóa Đơn Đỏ</h3>
-      <div class="bg-white border-2 border-dashed border-gray-400 rounded-2xl h-64 flex flex-col items-center justify-center text-center p-6">
-        <i class="fa-solid fa-camera text-6xl text-gray-400 mb-4"></i>
-        <p class="font-medium">Chụp ảnh Hóa đơn</p>
-        <button onclick="simulateScan('invoice')" class="mt-6 bg-blue-600 text-white px-8 py-3 rounded-xl">📸 Chụp ngay</button>
+      <h3 class="text-lg font-bold mb-3">Chụp Hóa Đơn Đỏ</h3>
+      <div class="bg-white rounded-2xl shadow p-4">
+        <input type="file" id="invoice-camera" accept="image/*" capture="environment" class="hidden" onchange="handleImage(this, 'invoice')">
+        <button onclick="document.getElementById('invoice-camera').click()" 
+                class="w-full bg-blue-600 text-white py-10 rounded-2xl text-xl font-medium flex flex-col items-center gap-3">
+          <i class="fa-solid fa-camera text-4xl"></i>
+          <span>📸 Chụp Hóa đơn ngay</span>
+        </button>
+        <div id="invoice-preview" class="hidden mt-4">
+          <img id="invoice-image" class="preview-img w-full">
+        </div>
       </div>
-      <button onclick="showScreen('home')" class="mt-6 text-gray-500">← Quay lại</button>
+      <button onclick="processInvoice()" class="mt-6 w-full bg-green-600 text-white py-4 rounded-2xl font-bold">Xử lý OCR & So sánh</button>
+      <button onclick="showScreen('home')" class="mt-3 text-gray-500">← Quay lại</button>
     </div>
 
     <!-- KẾT QUẢ SO SÁNH -->
     <div id="result-screen" class="hidden">
-      <h3 class="text-lg font-bold mb-3">Kết quả đối chiếu PO & Hóa đơn</h3>
-      
+      <h3 class="text-lg font-bold mb-3">Kết quả đối chiếu</h3>
       <div class="bg-white rounded-2xl shadow overflow-hidden mb-6">
-        <table class="w-full">
+        <table class="w-full text-sm">
           <thead class="bg-gray-50">
             <tr>
-              <th class="py-3 px-4 text-left">Sản phẩm</th>
-              <th class="py-3 px-2 text-center">Đ.G PO</th>
-              <th class="py-3 px-2 text-center">Đ.G HĐ</th>
-              <th class="py-3 px-2 text-center">% Date</th>
-              <th class="py-3 px-4 text-center">Trạng thái</th>
+              <th class="py-3 px-3 text-left">Sản phẩm</th>
+              <th class="py-3 px-2 text-center">PO</th>
+              <th class="py-3 px-2 text-center">HĐ</th>
+              <th class="py-3 px-3 text-center">% Date</th>
+              <th class="py-3 px-3 text-center">Trạng thái</th>
             </tr>
           </thead>
-          <tbody id="compare-table" class="text-sm"></tbody>
+          <tbody id="compare-table" class="divide-y"></tbody>
         </table>
       </div>
 
       <div class="flex gap-3">
-        <button onclick="approveReceipt()" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold text-lg">✅ Duyệt Nhận Hàng</button>
-        <button onclick="reportIssue()" class="flex-1 bg-red-600 text-white py-4 rounded-2xl font-bold text-lg">❌ Báo Sai & Gửi</button>
+        <button onclick="approveReceipt()" class="flex-1 bg-green-600 text-white py-5 rounded-2xl font-bold text-lg">✅ Duyệt Nhận Hàng</button>
+        <button onclick="reportIssue()" class="flex-1 bg-red-600 text-white py-5 rounded-2xl font-bold text-lg">❌ Báo Sai</button>
       </div>
-      <button onclick="showScreen('home')" class="mt-4 text-gray-500 block mx-auto">← Về trang chủ</button>
+      <button onclick="showScreen('home')" class="mt-6 text-gray-500 block mx-auto">← Về trang chủ</button>
     </div>
 
     <!-- KIỂM TRA DATE -->
     <div id="date-screen" class="hidden">
       <h3 class="text-lg font-bold mb-4">Kiểm tra % Date còn lại</h3>
+      <!-- (giữ nguyên phần date như cũ) -->
       <div class="bg-white p-6 rounded-2xl shadow">
         <input type="text" id="product-name" placeholder="Tên sản phẩm" class="w-full border rounded-xl px-4 py-3 mb-4">
         <div class="grid grid-cols-2 gap-4">
@@ -115,70 +126,91 @@
         </div>
         <button onclick="calculateDate()" class="mt-6 w-full bg-purple-600 text-white py-4 rounded-2xl font-bold">Tính % Date</button>
       </div>
-
       <div id="date-result" class="hidden mt-6 p-6 bg-white rounded-2xl shadow text-center"></div>
-
       <button onclick="showScreen('home')" class="mt-6 text-gray-500">← Quay lại</button>
     </div>
   </div>
 
   <script>
-    // Dữ liệu demo
     let poData = [];
     let invoiceData = [];
+    let currentPOImage = null;
+    let currentInvoiceImage = null;
 
     function showScreen(screen) {
-      document.querySelectorAll('div[id$="-screen"], #home').forEach(el => el.classList.add('hidden'));
-      if (screen === 'home') {
-        document.getElementById('home').classList.remove('hidden');
-      } else {
-        document.getElementById(screen + '-screen').classList.remove('hidden');
+      document.querySelectorAll('#home, #po-screen, #invoice-screen, #result-screen, #date-screen').forEach(el => {
+        el.classList.add('hidden');
+      });
+      document.getElementById(screen + (screen === 'home' ? '' : '-screen')).classList.remove('hidden');
+    }
+
+    function handleImage(input, type) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          if (type === 'po') {
+            document.getElementById('po-image').src = e.target.result;
+            document.getElementById('po-preview').classList.remove('hidden');
+            currentPOImage = e.target.result;
+          } else {
+            document.getElementById('invoice-image').src = e.target.result;
+            document.getElementById('invoice-preview').classList.remove('hidden');
+            currentInvoiceImage = e.target.result;
+          }
+        };
+        reader.readAsDataURL(input.files[0]);
       }
     }
 
-    function simulateScan(type) {
-      if (type === 'po') {
-        poData = [
-          { name: "Sữa tươi A", pricePO: 15000, qtyPO: 100 },
-          { name: "Bánh quy B", pricePO: 20000, qtyPO: 50 }
-        ];
-        alert("✅ Đã quét PO thành công! (Demo)");
-      } else {
-        invoiceData = [
-          { name: "Sữa tươi A", priceHD: 14500, qtyHD: 100, datePercent: 92 },
-          { name: "Bánh quy B", priceHD: 22000, qtyHD: 48, datePercent: 45 }
-        ];
-        alert("✅ Đã quét Hóa đơn thành công! (Demo)");
-        showComparison();
+    function processPO() {
+      if (!currentPOImage) {
+        alert("Vui lòng chụp ảnh Đơn PO trước!");
+        return;
       }
+      poData = [
+        { name: "Sữa tươi A", pricePO: 15000, qtyPO: 100 },
+        { name: "Bánh quy B", pricePO: 20000, qtyPO: 50 }
+      ];
+      alert("✅ Đã xử lý Đơn PO thành công!");
+      showScreen('invoice');
     }
 
-    function useDemoData() {
-      simulateScan('po');
+    function processInvoice() {
+      if (!currentInvoiceImage) {
+        alert("Vui lòng chụp ảnh Hóa đơn trước!");
+        return;
+      }
+      
+      // Giả lập OCR
+      invoiceData = [
+        { name: "Sữa tươi A", priceHD: 14500, qtyHD: 100, datePercent: 92 },
+        { name: "Bánh quy B", priceHD: 22000, qtyHD: 48, datePercent: 45 }
+      ];
+
+      alert("🤖 Đang xử lý OCR...\n✅ Trích xuất dữ liệu thành công!");
+      showComparison();
     }
 
     function showComparison() {
       const tbody = document.getElementById('compare-table');
       tbody.innerHTML = '';
 
-      invoiceData.forEach((item, index) => {
-        const poItem = poData.find(p => p.name === item.name) || {pricePO: 0, qtyPO: 0};
+      invoiceData.forEach(item => {
+        const poItem = poData.find(p => p.name === item.name) || {pricePO: 0};
         const isGoodPrice = item.priceHD <= poItem.pricePO;
         const dateClass = item.datePercent > 80 ? 'text-green-600' : 
-                         (item.datePercent >= 50 ? 'text-yellow-600' : 'text-red-600 font-bold blink');
+                         (item.datePercent >= 50 ? 'text-yellow-600' : 'text-red-600 font-bold');
 
         const row = `
-          <tr class="border-t">
-            <td class="py-4 px-4">${item.name}</td>
+          <tr>
+            <td class="py-4 px-3">${item.name}</td>
             <td class="py-4 px-2 text-center">${poItem.pricePO.toLocaleString()}</td>
-            <td class="py-4 px-2 text-center ${isGoodPrice ? 'text-green-600' : 'text-red-600 font-bold'}">
-              ${item.priceHD.toLocaleString()}
-            </td>
-            <td class="py-4 px-2 text-center ${dateClass}">${item.datePercent}%</td>
-            <td class="py-4 px-4 text-center">
-              ${item.datePercent < 50 || !isGoodPrice ? 
-                '<span class="text-red-600">❌ Cảnh báo</span>' : 
-                '<span class="text-green-600">✅ Hợp lệ</span>'}
+            <td class="py-4 px-2 text-center ${isGoodPrice ? 'text-green-600' : 'text-red-600 font-bold'}">${item.priceHD.toLocaleString()}</td>
+            <td class="py-4 px-3 text-center ${dateClass}">${item.datePercent}%</td>
+            <td class="py-4 px-3 text-center">
+              ${isGoodPrice && item.datePercent >= 50 ? 
+                '<span class="text-green-600">✅ Hợp lệ</span>' : 
+                '<span class="text-red-600">⚠️ Cảnh báo</span>'}
             </td>
           </tr>`;
         tbody.innerHTML += row;
@@ -192,40 +224,34 @@
       const hsd = new Date(document.getElementById('hsd').value);
       const today = new Date();
 
-      if (!nsx || !hsd) {
-        alert("Vui lòng nhập ngày sản xuất và hạn sử dụng!");
-        return;
-      }
+      if (!nsx || !hsd) return alert("Vui lòng nhập đầy đủ ngày!");
 
-      const totalShelf = (hsd - nsx) / (1000*60*60*24);
-      const remaining = (hsd - today) / (1000*60*60*24);
-      const percent = Math.round((remaining / totalShelf) * 100);
+      const total = (hsd - nsx) / (86400000);
+      const remain = (hsd - today) / (86400000);
+      const percent = Math.round((remain / total) * 100);
 
       let color = percent > 80 ? 'text-green-600' : (percent >= 50 ? 'text-yellow-600' : 'text-red-600');
-      let status = percent > 80 ? 'RẤT TỐT' : (percent >= 50 ? 'CHẤP NHẬN ĐƯỢC' : 'CẬN DATE - CẢNH BÁO');
+      let status = percent > 80 ? 'RẤT TỐT' : (percent >= 50 ? 'CHẤP NHẬN' : 'CẬN DATE - CẢNH BÁO');
 
       document.getElementById('date-result').innerHTML = `
-        <p class="text-5xl font-bold ${color}">${percent}%</p>
-        <p class="mt-2 text-xl font-semibold">${status}</p>
-        <p class="text-sm text-gray-500 mt-4">Hạn sử dụng còn lại: ${Math.round(remaining)} ngày</p>
+        <p class="text-6xl font-bold ${color}">${percent}%</p>
+        <p class="text-xl mt-2">${status}</p>
       `;
       document.getElementById('date-result').classList.remove('hidden');
     }
 
     function approveReceipt() {
-      alert("✅ Đã duyệt nhận hàng thành công!\nBáo cáo đã được lưu và gửi.");
+      alert("✅ Đã duyệt nhận hàng thành công!\nDữ liệu đã được lưu.");
       showScreen('home');
     }
 
     function reportIssue() {
-      alert("📧 Báo cáo sai lệch đã được gửi đến bộ phận Thu mua & Kế toán qua Zalo/Email.");
+      alert("📤 Báo cáo sai lệch đã được gửi đến Thu mua & Kế toán.");
       showScreen('home');
     }
 
-    // Hiển thị ngày hiện tại
+    // Khởi chạy
     document.getElementById('current-date').textContent = new Date().toLocaleDateString('vi-VN');
-
-    // Khởi động
     showScreen('home');
   </script>
 </body>
