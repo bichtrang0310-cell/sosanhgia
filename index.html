@@ -2,279 +2,1172 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Receiving - Nhận Hàng</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Smart Receiving - Nhận Hàng Thông Minh</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; }
-    .big-btn { transition: all 0.3s; }
-    .big-btn:active { transform: scale(0.95); }
-    .preview-img { max-height: 320px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap');
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242836;
+      --border: #2e3347;
+      --text: #e8eaf0;
+      --text-dim: #8b8fa7;
+      --accent: #6c5ce7;
+      --accent-glow: rgba(108, 92, 231, 0.3);
+      --green: #00b894;
+      --green-dim: rgba(0, 184, 148, 0.15);
+      --orange: #fdcb6e;
+      --orange-dim: rgba(253, 203, 110, 0.15);
+      --red: #ff6b6b;
+      --red-dim: rgba(255, 107, 107, 0.15);
+      --blue: #74b9ff;
+      --blue-dim: rgba(116, 185, 255, 0.15);
+      --radius: 16px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: linear-gradient(135deg, #1a1d27 0%, #242836 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 12px;
+      backdrop-filter: blur(20px);
+    }
+    .header-logo {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), #a29bfe);
+      border-radius: 12px;
+      display: grid; place-items: center;
+      font-size: 18px; font-weight: 800;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+    .header-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-text p { font-size: 11px; color: var(--text-dim); }
+
+    .main { padding: 76px 16px 32px; max-width: 480px; margin: 0 auto; }
+
+    .screen { display: none; animation: fadeUp 0.35s ease; }
+    .screen.active { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .api-config {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
+    }
+    .api-config summary {
+      cursor: pointer; font-size: 13px; font-weight: 600;
+      color: var(--text-dim); list-style: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .api-config summary::before { content: '⚙️'; }
+    .api-config[open] { border-color: var(--accent); }
+    .api-key-row { display: flex; gap: 8px; margin-top: 12px; }
+    .api-key-row input {
+      flex: 1; padding: 10px 12px; border-radius: 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-family: monospace; font-size: 13px; outline: none;
+    }
+    .api-key-row input:focus { border-color: var(--accent); }
+    .api-key-row button {
+      padding: 10px 16px; border-radius: 10px;
+      background: var(--accent); color: #fff; border: none;
+      font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    .api-status { margin-top: 8px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+    .api-status .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .api-status .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .api-status .dot.off { background: var(--red); }
+
+    .greeting { text-align: center; padding: 24px 0 8px; }
+    .greeting h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .greeting .date-badge {
+      display: inline-block; margin-top: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 6px 14px; border-radius: 20px;
+      font-size: 13px; color: var(--text-dim);
+    }
+    .greeting .date-badge i { margin-right: 6px; color: var(--accent); }
+
+    .home-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+    .home-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+      display: flex; align-items: center; gap: 16px;
+      cursor: pointer; transition: all 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .home-card:active { transform: scale(0.97); }
+    .home-card:hover { border-color: var(--accent); }
+    .home-card::after {
+      content: '\f054'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      font-family: 'Font Awesome 6 Free'; font-weight: 900;
+      color: var(--text-dim); font-size: 12px;
+    }
+    .card-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: grid; place-items: center; font-size: 22px; flex-shrink: 0;
+    }
+    .card-icon.green { background: var(--green-dim); color: var(--green); }
+    .card-icon.orange { background: var(--orange-dim); color: var(--orange); }
+    .card-icon.purple { background: var(--accent-glow); color: #a29bfe; }
+    .card-icon.blue { background: var(--blue-dim); color: var(--blue); }
+    .card-info h3 { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .card-info p { font-size: 12px; color: var(--text-dim); }
+
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
+    .stat-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 10px; text-align: center;
+    }
+    .stat-box .num { font-size: 24px; font-weight: 800; }
+    .stat-box .label { font-size: 10px; color: var(--text-dim); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .back-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); display: grid; place-items: center;
+      cursor: pointer; font-size: 14px; transition: 0.2s;
+    }
+    .back-btn:hover { background: var(--surface); border-color: var(--accent); }
+    .section-header h3 { font-size: 18px; font-weight: 700; }
+
+    .capture-zone {
+      background: var(--surface); border: 2px dashed var(--border);
+      border-radius: var(--radius); padding: 40px 20px;
+      text-align: center; cursor: pointer; transition: 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .capture-zone:hover { border-color: var(--accent); }
+    .capture-zone.has-image { padding: 0; border-style: solid; border-color: var(--green); }
+    .capture-zone i.cam-icon { font-size: 40px; color: var(--text-dim); margin-bottom: 12px; }
+    .capture-zone p.cam-text { color: var(--text-dim); font-size: 14px; }
+    .capture-zone img {
+      width: 100%; max-height: 280px; object-fit: cover;
+      border-radius: 14px; display: none;
+    }
+    .capture-zone.has-image img { display: block; }
+    .capture-zone.has-image .cam-icon,
+    .capture-zone.has-image .cam-text { display: none; }
+    .capture-zone.has-image::after {
+      content: '✓ Đã chụp'; position: absolute; bottom: 8px; right: 8px;
+      background: var(--green); color: #fff; font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 8px;
+    }
+    .recapture-btn {
+      margin-top: 8px; background: none; border: none; color: var(--accent);
+      font-family: inherit; font-size: 13px; cursor: pointer; font-weight: 600; display: none;
+    }
+    .capture-zone.has-image ~ .recapture-btn { display: inline-block; }
+    input[type="file"] { display: none; }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 16px; border-radius: 14px;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      border: none; cursor: pointer; transition: all 0.2s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 20px var(--accent-glow); }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-outline { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+    .po-item-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    }
+    .po-item-card .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .po-item-card .item-header span { font-weight: 600; font-size: 14px; }
+    .po-item-card .remove-btn {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--red-dim); color: var(--red); border: none; cursor: pointer; font-size: 12px;
+    }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .field label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); font-family: inherit; font-size: 14px; outline: none; transition: 0.2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+    .add-item-btn {
+      width: 100%; padding: 12px; border-radius: 14px;
+      background: var(--surface); border: 2px dashed var(--border);
+      color: var(--text-dim); font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: 0.2s; margin-bottom: 16px;
+    }
+    .add-item-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .ocr-overlay {
+      display: none; position: fixed; inset: 0; z-index: 150;
+      background: rgba(15,17,23,0.92); backdrop-filter: blur(10px); place-items: center;
+    }
+    .ocr-overlay.show { display: grid; }
+    .ocr-box { text-align: center; padding: 40px; }
+    .ocr-spinner {
+      width: 56px; height: 56px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ocr-box h4 { font-size: 18px; margin-bottom: 8px; }
+    .ocr-box p { color: var(--text-dim); font-size: 13px; }
+    .ocr-steps { margin-top: 20px; text-align: left; max-width: 280px; margin-left: auto; margin-right: auto; }
+    .ocr-step {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; font-size: 13px; color: var(--text-dim); transition: 0.3s;
+    }
+    .ocr-step.active { color: var(--text); }
+    .ocr-step.done { color: var(--green); }
+    .ocr-step .step-icon {
+      width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+      font-size: 11px; flex-shrink: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+    }
+    .ocr-step.active .step-icon { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .ocr-step.done .step-icon { background: var(--green); border-color: var(--green); color: #fff; }
+
+    .ocr-raw-toggle {
+      background: none; border: none; color: var(--accent); font-family: inherit;
+      font-size: 12px; cursor: pointer; font-weight: 600; margin-top: 12px;
+    }
+    .ocr-raw-text {
+      display: none; margin-top: 8px; padding: 12px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      font-size: 11px; color: var(--text-dim); white-space: pre-wrap;
+      max-height: 200px; overflow-y: auto; font-family: monospace;
+    }
+    .ocr-raw-text.show { display: block; }
+
+    .compare-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; margin-bottom: 10px; overflow: hidden;
+    }
+    .compare-card-header {
+      padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-card-header .product-name { font-weight: 700; font-size: 14px; }
+    .compare-card-body { padding: 12px 14px; }
+    .compare-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
+    .compare-row .label { color: var(--text-dim); }
+    .compare-row .val { font-weight: 600; }
+    .compare-row .val.ok { color: var(--green); }
+    .compare-row .val.warn { color: var(--orange); }
+    .compare-row .val.bad { color: var(--red); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;
+    }
+    .badge.ok { background: var(--green-dim); color: var(--green); }
+    .badge.warn { background: var(--orange-dim); color: var(--orange); }
+    .badge.bad { background: var(--red-dim); color: var(--red); }
+
+    .summary-bar {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px; margin-bottom: 16px;
+      display: flex; justify-content: space-around; text-align: center;
+    }
+    .summary-item .num { font-size: 22px; font-weight: 800; }
+    .summary-item .label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+
+    .date-result-circle {
+      width: 180px; height: 180px; border-radius: 50%;
+      margin: 24px auto; display: grid; place-items: center; position: relative;
+    }
+    .date-result-circle .percent { font-size: 48px; font-weight: 900; }
+    .date-result-circle .sub { font-size: 12px; color: var(--text-dim); margin-top: -4px; }
+    .date-result-circle svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+    .date-result-circle svg circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+    .date-status { text-align: center; font-size: 18px; font-weight: 700; margin-top: 8px; }
+    .date-info { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+    .history-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .history-item .hi-left { display: flex; align-items: center; gap: 12px; }
+    .history-item .hi-icon { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 16px; }
+    .history-item .hi-name { font-weight: 600; font-size: 14px; }
+    .history-item .hi-date { font-size: 11px; color: var(--text-dim); }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-dim); }
+    .empty-state i { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+
+    .step-indicator { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+    .step { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+    .step .dot {
+      width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+      background: var(--surface2); border: 1px solid var(--border); font-size: 11px; font-weight: 700;
+    }
+    .step.active .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .step.done .dot { background: var(--green); border-color: var(--green); color: #fff; }
+    .step-line { width: 20px; height: 1px; background: var(--border); align-self: center; }
+
+    .ocr-edit-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    }
+    .ocr-edit-card .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .ocr-edit-card .item-header span { font-weight: 600; font-size: 14px; color: var(--accent); }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 14px 24px; border-radius: 14px;
+      font-size: 14px; font-weight: 600;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      transition: transform 0.35s ease; z-index: 200;
+      display: flex; align-items: center; gap: 10px; max-width: 90vw;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid var(--red);
+      border-radius: 12px; padding: 14px; margin-top: 12px; font-size: 13px; color: var(--red);
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-20">
+<body>
 
-  <div class="bg-blue-600 text-white p-4 fixed top-0 w-full z-50 shadow-md">
-    <h1 class="text-xl font-bold text-center">Smart Receiving</h1>
-    <p class="text-center text-sm opacity-90">OCR + So sánh giá tự động</p>
+  <div class="header">
+    <div class="header-logo">SR</div>
+    <div class="header-text">
+      <h1>Smart Receiving</h1>
+      <p>Nhận hàng thông minh — Google Vision OCR</p>
+    </div>
   </div>
 
-  <div class="pt-20 px-4 max-w-lg mx-auto">
+  <!-- OCR Loading Overlay -->
+  <div class="ocr-overlay" id="ocr-overlay">
+    <div class="ocr-box">
+      <div class="ocr-spinner"></div>
+      <h4>Đang xử lý OCR...</h4>
+      <p>Google Vision đang đọc hóa đơn</p>
+      <div class="ocr-steps">
+        <div class="ocr-step" id="ocr-s1"><span class="step-icon">1</span> Gửi ảnh lên Google Vision</div>
+        <div class="ocr-step" id="ocr-s2"><span class="step-icon">2</span> Nhận diện văn bản</div>
+        <div class="ocr-step" id="ocr-s3"><span class="step-icon">3</span> Phân tích bảng hóa đơn</div>
+        <div class="ocr-step" id="ocr-s4"><span class="step-icon">4</span> Trích xuất sản phẩm, SL, giá</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
 
     <!-- HOME -->
-    <div id="home" class="space-y-6">
-      <div class="text-center py-6">
-        <h2 class="text-2xl font-bold text-gray-800">Sẵn sàng nhận hàng</h2>
-        <p class="text-gray-600">Hôm nay: <span id="current-date"></span></p>
+    <div id="screen-home" class="screen active">
+      <div class="greeting">
+        <h2>Xin chào! 👋</h2>
+        <div class="date-badge"><i class="fa-regular fa-calendar"></i> <span id="today-date"></span></div>
       </div>
 
-      <div class="grid grid-cols-1 gap-4">
-        <button onclick="showScreen('po')" class="big-btn bg-green-500 text-white text-xl font-semibold py-8 rounded-2xl shadow-lg flex items-center justify-center gap-3">
-          <i class="fa-solid fa-file-alt text-3xl"></i>
-          <span>1. Chụp Đơn PO</span>
-        </button>
+      <details class="api-config" id="api-config">
+        <summary>Cấu hình Google Vision API Key</summary>
+        <div class="api-key-row">
+          <input type="password" id="api-key-input" placeholder="Nhập API Key...">
+          <button onclick="saveApiKey()">Lưu</button>
+        </div>
+        <div class="api-status" id="api-status">
+          <span class="dot off" id="api-dot"></span>
+          <span id="api-status-text">Chưa cấu hình</span>
+        </div>
+      </details>
 
-        <button onclick="showScreen('invoice')" class="big-btn bg-orange-500 text-white text-xl font-semibold py-8 rounded-2xl shadow-lg flex items-center justify-center gap-3">
-          <i class="fa-solid fa-receipt text-3xl"></i>
-          <span>2. Chụp Hóa Đơn → OCR</span>
-        </button>
+      <div class="stats-row">
+        <div class="stat-box"><div class="num" style="color:var(--green)" id="stat-ok">0</div><div class="label">Hợp lệ</div></div>
+        <div class="stat-box"><div class="num" style="color:var(--orange)" id="stat-warn">0</div><div class="label">Cảnh báo</div></div>
+        <div class="stat-box"><div class="num" style="color:var(--red)" id="stat-bad">0</div><div class="label">Sai lệch</div></div>
+      </div>
 
-        <button onclick="showScreen('date')" class="big-btn bg-purple-500 text-white text-xl font-semibold py-8 rounded-2xl shadow-lg flex items-center justify-center gap-3">
-          <i class="fa-solid fa-calendar-check text-3xl"></i>
-          <span>3. Kiểm tra Date</span>
-        </button>
+      <div class="home-cards">
+        <div class="home-card" onclick="goScreen('po')">
+          <div class="card-icon green"><i class="fa-solid fa-file-lines"></i></div>
+          <div class="card-info"><h3>Nhập Đơn Đặt Hàng (PO)</h3><p>Chụp ảnh OCR hoặc nhập tay đơn hàng</p></div>
+        </div>
+        <div class="home-card" onclick="goScreen('invoice')">
+          <div class="card-icon orange"><i class="fa-solid fa-receipt"></i></div>
+          <div class="card-info"><h3>Chụp Hóa Đơn Đỏ</h3><p>OCR Google Vision & so sánh với PO</p></div>
+        </div>
+        <div class="home-card" onclick="goScreen('date')">
+          <div class="card-icon purple"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <div class="card-info"><h3>Kiểm Tra % Date</h3><p>Tính hạn sử dụng còn lại</p></div>
+        </div>
+        <div class="home-card" onclick="goScreen('history')">
+          <div class="card-icon blue"><i class="fa-solid fa-list-check"></i></div>
+          <div class="card-info"><h3>Lịch Sử Nhận Hàng</h3><p>Xem lại các lần nhận hàng</p></div>
+        </div>
       </div>
     </div>
 
     <!-- PO SCREEN -->
-    <div id="po-screen" class="hidden">
-      <h3 class="font-bold mb-3">Chụp Đơn Đặt Hàng (PO)</h3>
-      <input type="file" id="po-input" accept="image/*" capture="environment" class="hidden" onchange="previewImage(this, 'po')">
-      <button onclick="document.getElementById('po-input').click()" class="w-full bg-blue-600 text-white py-12 rounded-2xl text-xl flex flex-col items-center">
-        <i class="fa-solid fa-camera text-5xl mb-3"></i>
-        <span>📸 Chụp Đơn PO</span>
-      </button>
-      <div id="po-preview" class="hidden mt-4 text-center">
-        <img id="po-img" class="preview-img mx-auto">
+    <div id="screen-po" class="screen">
+      <div class="section-header">
+        <button class="back-btn" onclick="goScreen('home')"><i class="fa-solid fa-chevron-left"></i></button>
+        <h3>Nhập Đơn Đặt Hàng (PO)</h3>
       </div>
-      <button onclick="processPO()" class="mt-6 w-full bg-green-600 text-white py-4 rounded-2xl font-bold">Tiếp tục →</button>
-      <button onclick="showScreen('home')" class="mt-4 text-gray-500">← Quay lại</button>
+      <div class="step-indicator">
+        <div class="step active"><span class="dot">1</span> Nhập PO</div>
+        <div class="step-line"></div>
+        <div class="step"><span class="dot">2</span> Hóa đơn</div>
+        <div class="step-line"></div>
+        <div class="step"><span class="dot">3</span> So sánh</div>
+      </div>
+      <div class="capture-zone" id="po-capture" onclick="document.getElementById('po-file').click()">
+        <i class="fa-solid fa-camera cam-icon"></i>
+        <p class="cam-text">Chụp ảnh Đơn PO — OCR tự động trích xuất</p>
+        <img id="po-img">
+      </div>
+      <button class="recapture-btn" onclick="document.getElementById('po-file').click()">📷 Chụp lại</button>
+      <input type="file" id="po-file" accept="image/*" capture="environment" onchange="handleCapture(this,'po')">
+
+      <div style="margin-top:12px">
+        <button class="btn btn-outline" onclick="ocrPO()" id="btn-ocr-po" style="display:none">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> OCR trích xuất từ ảnh PO
+        </button>
+      </div>
+
+      <p style="text-align:center;color:var(--text-dim);font-size:12px;margin:16px 0 12px;">— hoặc nhập thủ công —</p>
+
+      <div id="po-items-list"></div>
+      <button class="add-item-btn" onclick="addPOItem()"><i class="fa-solid fa-plus"></i> Thêm sản phẩm</button>
+      <button class="btn btn-primary" onclick="savePO()"><i class="fa-solid fa-arrow-right"></i> Lưu PO & Tiếp tục chụp Hóa đơn</button>
     </div>
 
     <!-- INVOICE SCREEN -->
-    <div id="invoice-screen" class="hidden">
-      <h3 class="font-bold mb-3">Chụp Hóa Đơn Đỏ</h3>
-      <input type="file" id="invoice-input" accept="image/*" capture="environment" class="hidden" onchange="previewImage(this, 'invoice')">
-      <button onclick="document.getElementById('invoice-input').click()" class="w-full bg-blue-600 text-white py-12 rounded-2xl text-xl flex flex-col items-center">
-        <i class="fa-solid fa-camera text-5xl mb-3"></i>
-        <span>📸 Chụp Hóa Đơn</span>
-      </button>
-      <div id="invoice-preview" class="hidden mt-4 text-center">
-        <img id="invoice-img" class="preview-img mx-auto">
+    <div id="screen-invoice" class="screen">
+      <div class="section-header">
+        <button class="back-btn" onclick="goScreen('po')"><i class="fa-solid fa-chevron-left"></i></button>
+        <h3>Chụp Hóa Đơn Đỏ</h3>
       </div>
-      <button onclick="startOCR()" class="mt-6 w-full bg-orange-600 text-white py-5 rounded-2xl font-bold text-lg">🤖 Bắt đầu OCR & So sánh</button>
-      <button onclick="showScreen('home')" class="mt-4 text-gray-500">← Quay lại</button>
+      <div class="step-indicator">
+        <div class="step done"><span class="dot"><i class="fa-solid fa-check" style="font-size:10px"></i></span> PO</div>
+        <div class="step-line"></div>
+        <div class="step active"><span class="dot">2</span> Hóa đơn</div>
+        <div class="step-line"></div>
+        <div class="step"><span class="dot">3</span> So sánh</div>
+      </div>
+      <div class="capture-zone" id="inv-capture" onclick="document.getElementById('inv-file').click()">
+        <i class="fa-solid fa-camera cam-icon"></i>
+        <p class="cam-text">Chụp ảnh Hóa Đơn Đỏ</p>
+        <img id="inv-img">
+      </div>
+      <button class="recapture-btn" onclick="document.getElementById('inv-file').click()">📷 Chụp lại</button>
+      <input type="file" id="inv-file" accept="image/*" capture="environment" onchange="handleCapture(this,'inv')">
+
+      <div id="inv-error" class="error-box" style="display:none"></div>
+
+      <div style="margin-top:20px">
+        <button class="btn btn-primary" onclick="processOCR()" id="btn-ocr-inv">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Xử lý OCR & So sánh
+        </button>
+      </div>
+
+      <div id="ocr-raw-section" style="display:none; margin-top:16px;">
+        <button class="ocr-raw-toggle" onclick="toggleRawOCR()"><i class="fa-solid fa-code"></i> Xem văn bản OCR gốc</button>
+        <pre class="ocr-raw-text" id="ocr-raw-text"></pre>
+      </div>
+
+      <div id="ocr-edit-section" style="display:none; margin-top:16px;">
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">
+          <i class="fa-solid fa-pen"></i> Kiểm tra & chỉnh sửa kết quả OCR trước khi so sánh:
+        </p>
+        <div id="ocr-edit-list"></div>
+        <button class="btn btn-green" style="margin-top:12px" onclick="confirmOCRAndCompare()">
+          <i class="fa-solid fa-check-double"></i> Xác nhận & So sánh với PO
+        </button>
+      </div>
     </div>
 
     <!-- RESULT SCREEN -->
-    <div id="result-screen" class="hidden">
-      <h3 class="font-bold mb-3">Kết quả So sánh Giá</h3>
-      <div class="bg-white rounded-2xl shadow overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="py-3 px-3 text-left">Sản phẩm</th>
-              <th class="py-3 px-2 text-center">Giá PO</th>
-              <th class="py-3 px-2 text-center">Giá HĐ</th>
-              <th class="py-3 px-3 text-center">% Date</th>
-              <th class="py-3 px-3 text-center">Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody id="result-table" class="divide-y text-gray-700"></tbody>
-        </table>
+    <div id="screen-result" class="screen">
+      <div class="section-header">
+        <button class="back-btn" onclick="goScreen('home')"><i class="fa-solid fa-chevron-left"></i></button>
+        <h3>Kết Quả Đối Chiếu</h3>
       </div>
-
-      <div class="flex gap-3 mt-6">
-        <button onclick="approveReceipt()" class="flex-1 bg-green-600 text-white py-5 rounded-2xl font-bold">✅ Duyệt Nhận Hàng</button>
-        <button onclick="reportIssue()" class="flex-1 bg-red-600 text-white py-5 rounded-2xl font-bold">❌ Báo Sai</button>
+      <div class="step-indicator">
+        <div class="step done"><span class="dot"><i class="fa-solid fa-check" style="font-size:10px"></i></span> PO</div>
+        <div class="step-line"></div>
+        <div class="step done"><span class="dot"><i class="fa-solid fa-check" style="font-size:10px"></i></span> HĐ</div>
+        <div class="step-line"></div>
+        <div class="step active"><span class="dot">3</span> So sánh</div>
       </div>
-      <button onclick="showScreen('home')" class="mt-6 text-gray-500">← Về trang chủ</button>
+      <div class="summary-bar" id="result-summary"></div>
+      <div id="compare-cards"></div>
+      <div class="action-row">
+        <button class="btn btn-green" onclick="approveAll()"><i class="fa-solid fa-check"></i> Duyệt nhận</button>
+        <button class="btn btn-red" onclick="reportIssue()"><i class="fa-solid fa-triangle-exclamation"></i> Báo sai</button>
+      </div>
     </div>
 
-    <!-- DATE SCREEN (giữ nguyên) -->
-    <div id="date-screen" class="hidden">
-      <h3 class="font-bold mb-4">Kiểm tra % Date còn lại</h3>
-      <div class="bg-white p-6 rounded-2xl shadow">
-        <input type="text" id="product-name" placeholder="Tên sản phẩm" class="w-full border rounded-xl px-4 py-3 mb-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm mb-1">Ngày sản xuất</label>
-            <input type="date" id="nsx" class="w-full border rounded-xl px-4 py-3">
-          </div>
-          <div>
-            <label class="block text-sm mb-1">Hạn sử dụng</label>
-            <input type="date" id="hsd" class="w-full border rounded-xl px-4 py-3">
-          </div>
-        </div>
-        <button onclick="calculateDate()" class="mt-6 w-full bg-purple-600 text-white py-4 rounded-2xl font-bold">Tính % Date</button>
+    <!-- DATE CHECKER -->
+    <div id="screen-date" class="screen">
+      <div class="section-header">
+        <button class="back-btn" onclick="goScreen('home')"><i class="fa-solid fa-chevron-left"></i></button>
+        <h3>Kiểm Tra % Date</h3>
       </div>
-      <div id="date-result" class="hidden mt-6 p-6 bg-white rounded-2xl shadow text-center"></div>
-      <button onclick="showScreen('home')" class="mt-6 text-gray-500">← Quay lại</button>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+        <div class="field" style="margin-bottom:12px">
+          <label>Tên sản phẩm</label>
+          <input type="text" id="date-product" placeholder="VD: Sữa tươi Vinamilk">
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Ngày sản xuất (NSX)</label><input type="date" id="date-nsx"></div>
+          <div class="field"><label>Hạn sử dụng (HSD)</label><input type="date" id="date-hsd"></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="calcDate()">
+          <i class="fa-solid fa-calculator"></i> Tính % Date
+        </button>
+      </div>
+      <div id="date-result" style="display:none; margin-top:20px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <div class="date-result-circle">
+            <svg viewBox="0 0 180 180">
+              <circle cx="90" cy="90" r="84" stroke="var(--border)" />
+              <circle cx="90" cy="90" r="84" id="date-arc" stroke="var(--green)" stroke-dasharray="528" stroke-dashoffset="528" />
+            </svg>
+            <div style="text-align:center;z-index:1">
+              <div class="percent" id="date-pct">0%</div>
+              <div class="sub">còn lại</div>
+            </div>
+          </div>
+          <div class="date-status" id="date-status-text"></div>
+          <div class="date-info" id="date-info-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="screen-history" class="screen">
+      <div class="section-header">
+        <button class="back-btn" onclick="goScreen('home')"><i class="fa-solid fa-chevron-left"></i></button>
+        <h3>Lịch Sử Nhận Hàng</h3>
+      </div>
+      <div id="history-list"></div>
     </div>
   </div>
 
+  <div class="toast" id="toast"></div>
+
   <script>
+    /* ═══════════════════════════════════════
+       STATE
+       ═══════════════════════════════════════ */
+    let API_KEY = localStorage.getItem('gvision_api_key') || '';
     let poItems = [];
     let invoiceItems = [];
-    let currentInvoiceImage = null;
+    let historyLog = JSON.parse(localStorage.getItem('sr_history') || '[]');
+    let poImageBase64 = null;
+    let invImageBase64 = null;
 
-    function showScreen(screen) {
-      document.querySelectorAll('#home, #po-screen, #invoice-screen, #result-screen, #date-screen').forEach(s => s.classList.add('hidden'));
-      const id = screen === 'home' ? 'home' : screen + '-screen';
-      document.getElementById(id).classList.remove('hidden');
+    /* ═══════════════════════════════════════
+       NAV & TOAST
+       ═══════════════════════════════════════ */
+    function goScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + id).classList.add('active');
+      window.scrollTo(0, 0);
+      if (id === 'history') renderHistory();
     }
 
-    function previewImage(input, type) {
-      if (input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
+    function showToast(msg, icon = '✅') {
+      const t = document.getElementById('toast');
+      t.innerHTML = `<span>${icon}</span> ${msg}`;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    /* ═══════════════════════════════════════
+       API KEY
+       ═══════════════════════════════════════ */
+    function saveApiKey() {
+      const key = document.getElementById('api-key-input').value.trim();
+      if (!key) { showToast('Vui lòng nhập API Key', '⚠️'); return; }
+      API_KEY = key;
+      localStorage.setItem('gvision_api_key', key);
+      updateApiStatus();
+      showToast('Đã lưu API Key');
+      document.getElementById('api-config').removeAttribute('open');
+    }
+
+    function updateApiStatus() {
+      const dot = document.getElementById('api-dot');
+      const text = document.getElementById('api-status-text');
+      if (API_KEY) {
+        dot.className = 'dot on';
+        text.textContent = 'Đã cấu hình (' + API_KEY.slice(0, 8) + '...)';
+        document.getElementById('api-key-input').value = API_KEY;
+      } else {
+        dot.className = 'dot off';
+        text.textContent = 'Chưa cấu hình — cần để sử dụng OCR';
+      }
+    }
+
+    /* ═══════════════════════════════════════
+       CAMERA — compress to max 1600px
+       ═══════════════════════════════════════ */
+    function handleCapture(input, type) {
+      if (!input.files || !input.files[0]) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1600;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          const base64 = dataUrl.split(',')[1];
           if (type === 'po') {
-            document.getElementById('po-img').src = e.target.result;
-            document.getElementById('po-preview').classList.remove('hidden');
+            poImageBase64 = base64;
+            document.getElementById('po-img').src = dataUrl;
+            document.getElementById('po-capture').classList.add('has-image');
+            document.getElementById('btn-ocr-po').style.display = 'flex';
           } else {
-            document.getElementById('invoice-img').src = e.target.result;
-            document.getElementById('invoice-preview').classList.remove('hidden');
-            currentInvoiceImage = e.target.result;
+            invImageBase64 = base64;
+            document.getElementById('inv-img').src = dataUrl;
+            document.getElementById('inv-capture').classList.add('has-image');
           }
         };
-        reader.readAsDataURL(input.files[0]);
-      }
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(input.files[0]);
     }
 
-    function processPO() {
-      // Demo PO data
-      poItems = [
-        {name: "Sữa tươi Vinamilk", pricePO: 15000},
-        {name: "Bánh quy Cosy", pricePO: 20000},
-        {name: "Nước ngọt Coca", pricePO: 8500}
-      ];
-      alert("✅ Đã lưu dữ liệu Đơn PO");
-      showScreen('invoice');
-    }
+    /* ═══════════════════════════════════════
+       GOOGLE VISION API
+       ═══════════════════════════════════════ */
+    async function callGoogleVision(base64Image) {
+      if (!API_KEY) throw new Error('Chưa cấu hình API Key. Vui lòng nhập ở trang chủ.');
 
-    async function startOCR() {
-      if (!currentInvoiceImage) {
-        alert("Vui lòng chụp hóa đơn trước!");
-        return;
-      }
+      const url = `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`;
+      const body = {
+        requests: [{
+          image: { content: base64Image },
+          features: [{ type: 'DOCUMENT_TEXT_DETECTION', maxResults: 1 }]
+        }]
+      };
 
-      const loading = alert("🤖 Đang xử lý OCR... (có thể mất 10-30 giây)\n\nVui lòng chờ...");
-
-      try {
-        const worker = await Tesseract.createWorker('vie', 1, {
-          logger: m => console.log(m)
-        });
-
-        const result = await worker.recognize(currentInvoiceImage);
-        await worker.terminate();
-
-        const text = result.data.text;
-        console.log("OCR Text:", text);
-
-        // Phân tích text thô thành dữ liệu (cải tiến đơn giản)
-        invoiceItems = parseInvoiceText(text);
-
-        if (invoiceItems.length === 0) {
-          alert("Không trích xuất được dữ liệu. Thử chụp lại rõ nét hơn!");
-          return;
-        }
-
-        showComparison();
-      } catch (err) {
-        console.error(err);
-        alert("Lỗi OCR: " + err.message);
-      }
-    }
-
-    function parseInvoiceText(text) {
-      const lines = text.split('\n');
-      const items = [];
-
-      lines.forEach(line => {
-        // Tìm dòng có số tiền và tên sản phẩm
-        const priceMatch = line.match(/(\d{1,3}(?:\.\d{3})*|\d+)\s*(?:đ|vnđ|đồng)/i);
-        if (priceMatch) {
-          const price = parseInt(priceMatch[1].replace(/\./g, ''));
-          const name = line.replace(priceMatch[0], '').trim().substring(0, 40);
-          if (name.length > 3) {
-            items.push({
-              name: name || "Sản phẩm không rõ",
-              priceHD: price || 0,
-              datePercent: Math.floor(Math.random() * 60) + 30   // demo
-            });
-          }
-        }
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       });
 
-      // Nếu không tìm thấy, dùng fallback demo
-      if (items.length === 0) {
-        return [
-          {name: "Sữa tươi Vinamilk", priceHD: 14800, datePercent: 85},
-          {name: "Bánh quy Cosy", priceHD: 22500, datePercent: 42}
-        ];
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error('Google Vision lỗi: ' + (err?.error?.message || `HTTP ${resp.status}`));
+      }
+
+      const data = await resp.json();
+      const r = data.responses?.[0];
+      if (r?.error) throw new Error('Vision API: ' + r.error.message);
+
+      return {
+        fullText: r?.fullTextAnnotation?.text || '',
+        blocks: r?.fullTextAnnotation?.pages?.[0]?.blocks || []
+      };
+    }
+
+    /* ═══════════════════════════════════════
+       SMART TABLE PARSER — Vietnamese Invoice
+       ═══════════════════════════════════════ */
+    function parseVNNumber(str) {
+      if (!str) return 0;
+      let s = str.replace(/\s/g, '');
+      // "15.000.000" or "15,000,000" → thousand separators
+      if (/^\d{1,3}([.,]\d{3})+$/.test(s)) {
+        s = s.replace(/[.,]/g, '');
+      }
+      s = s.replace(/,/g, '.');
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function parseInvoiceTable(rawText) {
+      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+      const items = [];
+
+      // Detect header row
+      let headerIdx = -1;
+      const headerPats = [
+        /t[eê]n.*s[ốô].*[gđ][ơi][áa]/i,
+        /s[ảa]n ph[ẩa]m.*sl.*[gđ][ơi][áa]/i,
+        /STT.*T[eê]n.*SL/i,
+        /Di[ễe]n gi[ảa]i.*S[ốô]/i,
+        /M[oô] t[aả].*s[ốô] l[ưu][ợo]ng/i,
+        /Hàng hóa.*Đơn vị.*Số lượng/i,
+      ];
+      for (let i = 0; i < lines.length; i++) {
+        for (const p of headerPats) { if (p.test(lines[i])) { headerIdx = i; break; } }
+        if (headerIdx >= 0) break;
+      }
+
+      const startLine = headerIdx >= 0 ? headerIdx + 1 : 0;
+
+      const stopPats = [
+        /t[oổ]ng\s*(c[oộ]ng|ti[eề]n)/i, /thu[eế]\s*(GTGT|VAT)/i,
+        /thành\s*tiền/i, /t[oổ]ng\s*thanh/i, /ghi\s*ch[uú]/i,
+        /ký\s*tên/i, /người\s*mua/i, /người\s*bán/i, /^cộng$/i
+      ];
+
+      function extractNumbers(line) {
+        const nums = [];
+        const regex = /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?|\d+/g;
+        let m;
+        while ((m = regex.exec(line)) !== null) {
+          const val = parseVNNumber(m[0]);
+          if (val > 0) nums.push({ val, idx: m.index, raw: m[0] });
+        }
+        return nums;
+      }
+
+      function extractProductName(line) {
+        let s = line.replace(/^\d{1,3}[.)]\s*/, '').replace(/^\d{1,2}\s+(?=[A-ZÀ-Ỹa-zà-ỹ])/, '');
+        const nums = extractNumbers(s);
+        if (nums.length >= 2) {
+          const firstIdx = s.indexOf(nums[0].raw);
+          if (firstIdx > 3) s = s.substring(0, firstIdx).trim();
+        }
+        s = s.replace(/[|_\-]+$/, '').replace(/\s*(Hộp|Thùng|Chai|Lon|Gói|Kg|Lít|Cái|Bịch|Túi)\s*$/i, '').trim();
+        return s;
+      }
+
+      for (let i = startLine; i < lines.length; i++) {
+        const line = lines[i];
+        let shouldStop = false;
+        for (const sp of stopPats) { if (sp.test(line)) { shouldStop = true; break; } }
+        if (shouldStop) break;
+
+        const nums = extractNumbers(line);
+        const name = extractProductName(line);
+        if (name.length < 2 || nums.length < 2) continue;
+
+        let qty = 0, price = 0;
+
+        if (nums.length >= 3) {
+          // Try to find qty × price ≈ total
+          let found = false;
+          for (let a = 0; a < nums.length - 1 && !found; a++) {
+            for (let b = a + 1; b < nums.length && !found; b++) {
+              const product = nums[a].val * nums[b].val;
+              for (let c = 0; c < nums.length; c++) {
+                if (c === a || c === b) continue;
+                if (nums[c].val > 0 && Math.abs(product - nums[c].val) / nums[c].val < 0.05) {
+                  if (nums[a].val <= nums[b].val) { qty = nums[a].val; price = nums[b].val; }
+                  else { qty = nums[b].val; price = nums[a].val; }
+                  found = true; break;
+                }
+              }
+            }
+          }
+          if (!found) { qty = nums[0].val; price = nums[1].val; }
+        } else {
+          if (nums[0].val <= nums[1].val) { qty = nums[0].val; price = nums[1].val; }
+          else { qty = nums[1].val; price = nums[0].val; }
+        }
+
+        if (qty > 0 && price > 0) {
+          items.push({ name, qty: Math.round(qty), price: Math.round(price) });
+        }
       }
       return items;
     }
 
+    /* ═══════════════════════════════════════
+       OCR OVERLAY ANIMATION
+       ═══════════════════════════════════════ */
+    function showOCROverlay() {
+      ['ocr-s1','ocr-s2','ocr-s3','ocr-s4'].forEach(id => {
+        document.getElementById(id).className = 'ocr-step';
+      });
+      document.getElementById('ocr-overlay').classList.add('show');
+    }
+    function hideOCROverlay() { document.getElementById('ocr-overlay').classList.remove('show'); }
+    function animateStep(n) {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          for (let i = 1; i < n; i++) document.getElementById('ocr-s' + i).className = 'ocr-step done';
+          document.getElementById('ocr-s' + n).className = 'ocr-step active';
+          resolve();
+        }, n === 1 ? 300 : 600);
+      });
+    }
+
+    /* ═══════════════════════════════════════
+       OCR FOR PO
+       ═══════════════════════════════════════ */
+    async function ocrPO() {
+      if (!poImageBase64) { showToast('Chụp ảnh PO trước', '⚠️'); return; }
+      if (!API_KEY) { showToast('Cần cấu hình API Key ở trang chủ', '⚠️'); return; }
+
+      showOCROverlay();
+      try {
+        await animateStep(1);
+        const result = await callGoogleVision(poImageBase64);
+        await animateStep(2);
+        await animateStep(3);
+        const items = parseInvoiceTable(result.fullText);
+        await animateStep(4);
+        hideOCROverlay();
+
+        if (items.length === 0) {
+          showToast('Không nhận diện được sản phẩm. Hãy nhập tay.', '⚠️');
+          return;
+        }
+
+        document.getElementById('po-items-list').innerHTML = '';
+        poCounter = 0;
+        items.forEach(it => addPOItem(it.name, it.qty, it.price));
+        showToast(`Trích xuất ${items.length} sản phẩm từ PO`, '🤖');
+      } catch (err) {
+        hideOCROverlay();
+        showToast(err.message, '❌');
+      }
+    }
+
+    /* ═══════════════════════════════════════
+       OCR FOR INVOICE
+       ═══════════════════════════════════════ */
+    async function processOCR() {
+      if (!invImageBase64) { showToast('Chụp ảnh Hóa đơn trước', '⚠️'); return; }
+      if (!API_KEY) { showToast('Cần cấu hình API Key ở trang chủ', '⚠️'); return; }
+      if (poItems.length === 0) { showToast('Chưa có dữ liệu PO. Quay lại bước 1.', '⚠️'); return; }
+
+      document.getElementById('inv-error').style.display = 'none';
+      showOCROverlay();
+
+      try {
+        await animateStep(1);
+        const result = await callGoogleVision(invImageBase64);
+        await animateStep(2);
+
+        document.getElementById('ocr-raw-text').textContent = result.fullText;
+        document.getElementById('ocr-raw-section').style.display = 'block';
+
+        await animateStep(3);
+        const items = parseInvoiceTable(result.fullText);
+        await animateStep(4);
+        hideOCROverlay();
+
+        if (items.length === 0) {
+          document.getElementById('inv-error').style.display = 'block';
+          document.getElementById('inv-error').innerHTML =
+            '<strong>Không tìm thấy sản phẩm.</strong><br>Xem văn bản OCR gốc bên dưới và thử chụp lại rõ hơn.';
+          return;
+        }
+
+        invoiceItems = items;
+        renderOCREdit(items);
+        showToast(`Tìm thấy ${items.length} sản phẩm — kiểm tra trước khi so sánh`, '🤖');
+      } catch (err) {
+        hideOCROverlay();
+        document.getElementById('inv-error').style.display = 'block';
+        document.getElementById('inv-error').textContent = err.message;
+      }
+    }
+
+    /* ═══════════════════════════════════════
+       EDITABLE OCR RESULTS
+       ═══════════════════════════════════════ */
+    function escHTML(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function renderOCREdit(items) {
+      const section = document.getElementById('ocr-edit-section');
+      const list = document.getElementById('ocr-edit-list');
+      section.style.display = 'block';
+      list.innerHTML = items.map((it, i) => `
+        <div class="ocr-edit-card">
+          <div class="item-header"><span><i class="fa-solid fa-barcode"></i> SP #${i+1}</span></div>
+          <div class="field" style="margin-bottom:8px">
+            <label>Tên sản phẩm</label>
+            <input type="text" class="ocr-name" value="${escHTML(it.name)}">
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Số lượng</label><input type="number" class="ocr-qty" value="${it.qty}"></div>
+            <div class="field"><label>Đơn giá (VNĐ)</label><input type="number" class="ocr-price" value="${it.price}"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function confirmOCRAndCompare() {
+      invoiceItems = [];
+      document.querySelectorAll('.ocr-edit-card').forEach(c => {
+        const name = c.querySelector('.ocr-name').value.trim();
+        const qty = parseInt(c.querySelector('.ocr-qty').value) || 0;
+        const price = parseInt(c.querySelector('.ocr-price').value) || 0;
+        if (name) invoiceItems.push({ name, qty, price });
+      });
+      if (invoiceItems.length === 0) { showToast('Không có sản phẩm nào', '⚠️'); return; }
+      showComparison();
+    }
+
+    function toggleRawOCR() { document.getElementById('ocr-raw-text').classList.toggle('show'); }
+
+    /* ═══════════════════════════════════════
+       PO ITEMS MANAGEMENT
+       ═══════════════════════════════════════ */
+    let poCounter = 0;
+    function addPOItem(name='', qty='', price='') {
+      poCounter++;
+      const id = poCounter;
+      const div = document.createElement('div');
+      div.className = 'po-item-card'; div.id = 'po-item-' + id;
+      div.innerHTML = `
+        <div class="item-header">
+          <span>Sản phẩm #${id}</span>
+          <button class="remove-btn" onclick="removePOItem(${id})"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="field" style="margin-bottom:8px">
+          <label>Tên sản phẩm</label>
+          <input type="text" class="po-name" placeholder="VD: Sữa tươi TH" value="${escHTML(String(name))}">
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Số lượng</label><input type="number" class="po-qty" placeholder="0" value="${qty}"></div>
+          <div class="field"><label>Đơn giá (VNĐ)</label><input type="number" class="po-price" placeholder="0" value="${price}"></div>
+        </div>`;
+      document.getElementById('po-items-list').appendChild(div);
+    }
+
+    function removePOItem(id) { document.getElementById('po-item-' + id)?.remove(); }
+
+    function savePO() {
+      poItems = [];
+      document.querySelectorAll('.po-item-card').forEach(c => {
+        const name = c.querySelector('.po-name').value.trim();
+        const qty = parseInt(c.querySelector('.po-qty').value) || 0;
+        const price = parseInt(c.querySelector('.po-price').value) || 0;
+        if (name && qty > 0 && price > 0) poItems.push({ name, qty, price });
+      });
+      if (poItems.length === 0) { showToast('Nhập ít nhất 1 sản phẩm có đủ tên, SL, giá', '⚠️'); return; }
+      showToast(`Đã lưu ${poItems.length} sản phẩm PO`);
+      goScreen('invoice');
+    }
+
+    /* ═══════════════════════════════════════
+       SMART MATCHING & COMPARISON
+       ═══════════════════════════════════════ */
+    function similarity(a, b) {
+      a = a.toLowerCase().replace(/\s+/g, ' ');
+      b = b.toLowerCase().replace(/\s+/g, ' ');
+      if (a === b) return 1;
+      if (a.includes(b) || b.includes(a)) return 0.85;
+      const tokA = new Set(a.split(/\s+/));
+      const tokB = new Set(b.split(/\s+/));
+      let common = 0;
+      tokA.forEach(t => { if (tokB.has(t)) common++; });
+      return common / Math.max(tokA.size, tokB.size);
+    }
+
     function showComparison() {
-      const tbody = document.getElementById('result-table');
-      tbody.innerHTML = '';
+      const matched = [];
+      const usedInv = new Set();
 
-      invoiceItems.forEach(item => {
-        const poItem = poItems.find(p => p.name.toLowerCase().includes(item.name.toLowerCase().substring(0,8))) || {pricePO: 0};
-        
-        const isGood = item.priceHD <= poItem.pricePO;
-        const dateClass = item.datePercent > 80 ? 'text-green-600' : 
-                         (item.datePercent >= 50 ? 'text-yellow-600' : 'text-red-600 font-bold');
-
-        const row = `
-          <tr class="border-t">
-            <td class="py-4 px-3">${item.name}</td>
-            <td class="py-4 px-2 text-center">${poItem.pricePO ? poItem.pricePO.toLocaleString() : '—'}</td>
-            <td class="py-4 px-2 text-center ${isGood ? 'text-green-600' : 'text-red-600 font-bold'}">${item.priceHD.toLocaleString()}</td>
-            <td class="py-4 px-3 text-center ${dateClass}">${item.datePercent}%</td>
-            <td class="py-4 px-3 text-center ${isGood ? '✅' : '⚠️'}"></td>
-          </tr>`;
-        tbody.innerHTML += row;
+      poItems.forEach(po => {
+        let bestIdx = -1, bestScore = 0;
+        invoiceItems.forEach((inv, idx) => {
+          if (usedInv.has(idx)) return;
+          const score = similarity(po.name, inv.name);
+          if (score > bestScore) { bestScore = score; bestIdx = idx; }
+        });
+        if (bestScore >= 0.3 && bestIdx >= 0) {
+          usedInv.add(bestIdx);
+          matched.push({ po, inv: invoiceItems[bestIdx], score: bestScore });
+        } else {
+          matched.push({ po, inv: null, score: 0 });
+        }
       });
 
-      showScreen('result');
+      invoiceItems.forEach((inv, idx) => {
+        if (!usedInv.has(idx)) matched.push({ po: null, inv, score: 0 });
+      });
+
+      let okCount = 0, warnCount = 0, badCount = 0;
+      let html = '';
+
+      matched.forEach(m => {
+        const po = m.po || { name: '—', qty: 0, price: 0 };
+        const inv = m.inv || { name: '—', qty: 0, price: 0 };
+        const displayName = m.po ? po.name : inv.name;
+
+        const priceDiff = inv.price - po.price;
+        const qtyDiff = inv.qty - po.qty;
+        const priceOk = m.po && m.inv && Math.abs(priceDiff) <= po.price * 0.02;
+        const qtyOk = qtyDiff === 0;
+
+        let status, statusClass;
+        if (!m.po || !m.inv) {
+          status = 'Thiếu'; statusClass = 'bad'; badCount++;
+        } else if (priceOk && qtyOk) {
+          status = 'Hợp lệ'; statusClass = 'ok'; okCount++;
+        } else if (Math.abs(priceDiff) > po.price * 0.05 || Math.abs(qtyDiff) > 2) {
+          status = 'Sai lệch'; statusClass = 'bad'; badCount++;
+        } else {
+          status = 'Cảnh báo'; statusClass = 'warn'; warnCount++;
+        }
+
+        const priceClass = priceOk ? 'ok' : (Math.abs(priceDiff) > po.price * 0.05 ? 'bad' : 'warn');
+        const qtyClass = qtyOk ? 'ok' : 'bad';
+        const matchLabel = m.score >= 0.85 ? '' :
+          (m.score >= 0.3 ? `<span style="font-size:10px;color:var(--orange)"> ≈${Math.round(m.score*100)}%</span>` : '');
+
+        html += `<div class="compare-card">
+          <div class="compare-card-header">
+            <div><span class="product-name">${escHTML(displayName)}</span>${matchLabel}</div>
+            <span class="badge ${statusClass}">${status}</span>
+          </div>
+          <div class="compare-card-body">
+            ${m.po && m.inv ? `
+              <div class="compare-row"><span class="label">Giá PO</span><span class="val">${po.price.toLocaleString()}đ</span></div>
+              <div class="compare-row"><span class="label">Giá Hóa đơn</span><span class="val ${priceClass}">${inv.price.toLocaleString()}đ ${priceDiff !== 0 ? '('+(priceDiff>0?'+':'')+priceDiff.toLocaleString()+')' : ''}</span></div>
+              <div class="compare-row"><span class="label">SL: PO → HĐ</span><span class="val ${qtyClass}">${po.qty} → ${inv.qty} ${qtyDiff !== 0 ? '('+(qtyDiff>0?'+':'')+qtyDiff+')' : '✓'}</span></div>
+            ` : `
+              <div class="compare-row"><span class="label">${!m.po ? 'Không có trong PO' : 'Không có trong Hóa đơn'}</span><span class="val bad">Thiếu dữ liệu</span></div>
+            `}
+          </div>
+        </div>`;
+      });
+
+      document.getElementById('compare-cards').innerHTML = html;
+      document.getElementById('result-summary').innerHTML = `
+        <div class="summary-item"><div class="num" style="color:var(--green)">${okCount}</div><div class="label">Hợp lệ</div></div>
+        <div class="summary-item"><div class="num" style="color:var(--orange)">${warnCount}</div><div class="label">Cảnh báo</div></div>
+        <div class="summary-item"><div class="num" style="color:var(--red)">${badCount}</div><div class="label">Sai lệch</div></div>`;
+      document.getElementById('stat-ok').textContent = okCount;
+      document.getElementById('stat-warn').textContent = warnCount;
+      document.getElementById('stat-bad').textContent = badCount;
+      goScreen('result');
     }
 
-    function calculateDate() { /* giữ nguyên như cũ */ 
-      const nsx = new Date(document.getElementById('nsx').value);
-      const hsd = new Date(document.getElementById('hsd').value);
-      if (!nsx || !hsd) return alert("Nhập ngày!");
-      const percent = Math.round(((hsd - new Date()) / (hsd - nsx)) * 100);
-      const el = document.getElementById('date-result');
-      el.innerHTML = `<p class="text-6xl font-bold ${percent>80?'text-green-600':(percent>=50?'text-yellow-600':'text-red-600')}">${percent}%</p>`;
-      el.classList.remove('hidden');
-    }
-
-    function approveReceipt() {
-      alert("✅ Duyệt nhận hàng thành công!");
-      showScreen('home');
+    /* ═══════════════════════════════════════
+       ACTIONS
+       ═══════════════════════════════════════ */
+    function approveAll() {
+      historyLog.unshift({ date: new Date().toLocaleString('vi-VN'), items: invoiceItems.length, status: 'approved' });
+      localStorage.setItem('sr_history', JSON.stringify(historyLog));
+      showToast('Đã duyệt nhận hàng thành công!');
+      resetSession();
+      setTimeout(() => goScreen('home'), 1200);
     }
 
     function reportIssue() {
-      alert("📤 Đã gửi báo cáo sai lệch đến bộ phận liên quan.");
-      showScreen('home');
+      historyLog.unshift({ date: new Date().toLocaleString('vi-VN'), items: invoiceItems.length, status: 'reported' });
+      localStorage.setItem('sr_history', JSON.stringify(historyLog));
+      showToast('Đã gửi báo cáo sai lệch đến Thu mua & Kế toán', '📤');
+      resetSession();
+      setTimeout(() => goScreen('home'), 1200);
     }
 
-    document.getElementById('current-date').textContent = new Date().toLocaleDateString('vi-VN');
-    showScreen('home');
+    function resetSession() {
+      poItems = []; invoiceItems = [];
+      poImageBase64 = null; invImageBase64 = null;
+      document.getElementById('po-items-list').innerHTML = '';
+      document.getElementById('po-capture').classList.remove('has-image');
+      document.getElementById('inv-capture').classList.remove('has-image');
+      document.getElementById('ocr-edit-section').style.display = 'none';
+      document.getElementById('ocr-raw-section').style.display = 'none';
+      document.getElementById('btn-ocr-po').style.display = 'none';
+      poCounter = 0;
+      addPOItem(); addPOItem();
+    }
+
+    /* ═══════════════════════════════════════
+       DATE CALCULATOR
+       ═══════════════════════════════════════ */
+    function calcDate() {
+      const nsxVal = document.getElementById('date-nsx').value;
+      const hsdVal = document.getElementById('date-hsd').value;
+      const product = document.getElementById('date-product').value || 'Sản phẩm';
+      if (!nsxVal || !hsdVal) { showToast('Nhập đầy đủ NSX và HSD', '⚠️'); return; }
+
+      const nsx = new Date(nsxVal), hsd = new Date(hsdVal), today = new Date();
+      if (hsd <= nsx) { showToast('HSD phải sau NSX', '⚠️'); return; }
+
+      const total = (hsd - nsx) / 86400000;
+      const remain = (hsd - today) / 86400000;
+      const pct = Math.max(0, Math.min(100, Math.round((remain / total) * 100)));
+      const circumference = 2 * Math.PI * 84;
+      const offset = circumference - (pct / 100) * circumference;
+      const color = pct >= 80 ? 'var(--green)' : (pct >= 50 ? 'var(--orange)' : 'var(--red)');
+      const statusText = pct >= 80 ? '✅ RẤT TỐT' : (pct >= 50 ? '⚠️ CHẤP NHẬN ĐƯỢC' : '🚨 CẬN DATE - CẢNH BÁO');
+
+      const arc = document.getElementById('date-arc');
+      arc.style.stroke = color;
+      arc.style.strokeDashoffset = offset;
+      arc.style.transition = 'stroke-dashoffset 1s ease';
+      document.getElementById('date-pct').textContent = pct + '%';
+      document.getElementById('date-pct').style.color = color;
+      document.getElementById('date-status-text').textContent = statusText;
+      document.getElementById('date-status-text').style.color = color;
+      document.getElementById('date-info-text').textContent = `${product} — còn ${Math.max(0,Math.round(remain))} ngày (tổng ${Math.round(total)} ngày)`;
+      document.getElementById('date-result').style.display = 'block';
+    }
+
+    /* ═══════════════════════════════════════
+       HISTORY
+       ═══════════════════════════════════════ */
+    function renderHistory() {
+      const list = document.getElementById('history-list');
+      if (historyLog.length === 0) {
+        list.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Chưa có lịch sử nhận hàng</p></div>';
+        return;
+      }
+      list.innerHTML = historyLog.map((h, i) => `
+        <div class="history-item">
+          <div class="hi-left">
+            <div class="hi-icon" style="background:${h.status==='approved'?'var(--green-dim)':'var(--red-dim)'};color:${h.status==='approved'?'var(--green)':'var(--red)'}">
+              <i class="fa-solid ${h.status==='approved'?'fa-check':'fa-exclamation'}"></i>
+            </div>
+            <div>
+              <div class="hi-name">Đơn #${historyLog.length-i} — ${h.items} SP</div>
+              <div class="hi-date">${h.date}</div>
+            </div>
+          </div>
+          <span class="badge ${h.status==='approved'?'ok':'bad'}">${h.status==='approved'?'Đã duyệt':'Báo sai'}</span>
+        </div>`).join('');
+    }
+
+    /* ═══════════════════════════════════════
+       INIT
+       ═══════════════════════════════════════ */
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('vi-VN', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    updateApiStatus();
+    addPOItem(); addPOItem();
   </script>
 </body>
 </html>
